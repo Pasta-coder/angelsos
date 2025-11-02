@@ -3,12 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trash2, UserPlus } from "lucide-react";
+import { Trash2, UserPlus, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface Contact {
   id: string;
   name: string;
+  phone?: string;
   contact_user_id: string;
 }
 
@@ -20,6 +21,7 @@ const ContactManager = ({ userId }: ContactManagerProps) => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [name, setName] = useState("");
   const [contactUserId, setContactUserId] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -65,7 +67,7 @@ const ContactManager = ({ userId }: ContactManagerProps) => {
   const addContact = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !contactUserId.trim()) {
-      toast.error("Please fill in all fields");
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -76,6 +78,7 @@ const ContactManager = ({ userId }: ContactManagerProps) => {
         user_id: userId,
         name: name.trim(),
         contact_user_id: contactUserId.trim(),
+        phone: phone.trim(),
       });
 
     setLoading(false);
@@ -88,6 +91,7 @@ const ContactManager = ({ userId }: ContactManagerProps) => {
     toast.success("Contact added!");
     setName("");
     setContactUserId("");
+    setPhone("");
   };
 
   const deleteContact = async (id: string) => {
@@ -103,6 +107,30 @@ const ContactManager = ({ userId }: ContactManagerProps) => {
 
     toast.success("Contact deleted");
   };
+  const sendWhatsAppMessage = (contact: Contact) => {
+    if (!contact.phone) {
+      toast.error("No phone number saved for this contact");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const locationUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        const message = `🚨 Emergency Alert from SafePath!\n\nI need help! My current location is: ${locationUrl}`;
+        const formattedPhone = contact.phone.replace(/[\s+-]/g, '');
+        const encodedMessage = encodeURIComponent(message);
+        const waUrl = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
+        window.open(waUrl, '_blank');
+        toast.success("Opening WhatsApp...");
+      },
+      (error) => {
+        toast.error("Could not get location. Please enable location access.");
+        console.error("Geolocation error:", error);
+      }
+    );
+  };
+
 
   return (
     <Card>
@@ -129,6 +157,12 @@ const ContactManager = ({ userId }: ContactManagerProps) => {
             onChange={(e) => setContactUserId(e.target.value)}
             required
           />
+          <Input
+            placeholder="Phone Number (e.g., +15551234567)"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            type="tel"
+          />
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Adding..." : "Add Contact"}
           </Button>
@@ -145,19 +179,43 @@ const ContactManager = ({ userId }: ContactManagerProps) => {
                 key={contact.id}
                 className="flex items-center justify-between p-3 bg-secondary rounded-lg"
               >
-                <div>
+                <div className="flex-1">
                   <p className="font-medium">{contact.name}</p>
                   <p className="text-xs text-muted-foreground">
                     ID: {contact.contact_user_id}
                   </p>
+                  {contact.phone && (
+                    <p className="text-xs text-muted-foreground">
+                      Phone: {contact.phone}
+                    </p>
+                  )}
                 </div>
-                <Button
+                <div className="flex items-center gap-2">
+                  {contact.phone && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => sendWhatsAppMessage(contact)}
+                      title="Send WhatsApp message"
+                    >
+                      <MessageCircle className="w-4 h-4 text-green-600" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteContact(contact.id)}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+                {/* <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => deleteContact(contact.id)}
                 >
                   <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
+                </Button> */}
               </div>
             ))
           )}

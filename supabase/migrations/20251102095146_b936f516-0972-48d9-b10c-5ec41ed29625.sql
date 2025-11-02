@@ -1,9 +1,13 @@
+-- Add phone column to contacts table
+ALTER TABLE public.contacts
+ADD COLUMN phone text DEFAULT '';
 -- Create contacts table for managing emergency contacts
 CREATE TABLE public.contacts (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL,
   name TEXT NOT NULL,
   contact_user_id TEXT NOT NULL,
+  phone TEXT DEFAULT '',
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 

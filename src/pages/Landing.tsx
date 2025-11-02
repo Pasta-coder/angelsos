@@ -9,7 +9,7 @@ const Landing = () => {
     {
       icon: Shield,
       title: "Instant SOS",
-      description: "Alert contacts instantly with your location.",
+      description: "Alert contacts instantly with your location via in-app alerts and WhatsApp.",
     },
     {
       icon: MapPin,

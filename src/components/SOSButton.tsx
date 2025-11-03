@@ -71,8 +71,86 @@ const SOSButton = ({ userId }: SOSButtonProps) => {
     toast.success("Message saved!");
   };
 
+  const startEmergencyRecording = async (): Promise<string | null> => {
+    let mediaRecorder: MediaRecorder | null = null;
+    let recordedChunks: Blob[] = [];
+    let mediaType = 'video/webm';
+    let stream: MediaStream | null = null;
+
+    try {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        mediaType = 'video/webm;codecs=vp9,opus';
+      } catch (videoError) {
+        console.warn('Video failed, trying audio-only:', videoError);
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaType = 'audio/webm;codecs=opus';
+        } catch (audioError) {
+          console.error('Could not get audio/video:', audioError);
+          return null;
+        }
+      }
+
+      return new Promise((resolve) => {
+        if (!stream) {
+          resolve(null);
+          return;
+        }
+
+        mediaRecorder = new MediaRecorder(stream, { mimeType: mediaType });
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          const mediaBlob = new Blob(recordedChunks, { type: mediaType });
+          const fileExtension = mediaType.startsWith('video') ? 'webm' : 'webm';
+          const fileName = `${userId}/${Date.now()}.${fileExtension}`;
+
+          try {
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('emergency-media')
+              .upload(fileName, mediaBlob);
+
+            if (uploadError) throw uploadError;
+
+            const { data: urlData } = supabase.storage
+              .from('emergency-media')
+              .getPublicUrl(fileName);
+
+            stream?.getTracks().forEach(track => track.stop());
+            resolve(urlData.publicUrl);
+          } catch (uploadError) {
+            console.error('Failed to upload media:', uploadError);
+            stream?.getTracks().forEach(track => track.stop());
+            resolve(null);
+          }
+        };
+
+        mediaRecorder.start();
+
+        setTimeout(() => {
+          if (mediaRecorder?.state === 'recording') {
+            mediaRecorder.stop();
+          }
+        }, 60000); // Record for 60 seconds
+      });
+    } catch (err) {
+      console.error('Recording error:', err);
+      return null;
+    }
+  };
+
   const sendSOS = async (useAI: boolean) => {
     setSending(true);
+
+    // Start recording in parallel
+    const mediaPromise = startEmergencyRecording();
+
 
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -105,6 +183,8 @@ const SOSButton = ({ userId }: SOSButtonProps) => {
         toast.error("No emergency contacts found");
         return;
       }
+      // Wait for media recording to complete
+      const mediaUrl = await mediaPromise;
 
       // Send alerts to all contacts
       const alerts = contacts.map(contact => ({
@@ -112,6 +192,7 @@ const SOSButton = ({ userId }: SOSButtonProps) => {
         recipient_user_id: contact.contact_user_id,
         location,
         message: `${sosMessage} Location: ${location.lat}, ${location.lon}`,
+        media_url: mediaUrl,
       }));
 
       const { error } = await supabase
@@ -122,7 +203,11 @@ const SOSButton = ({ userId }: SOSButtonProps) => {
 
       setSosDetails({ message: sosMessage, location });
       setShowConfirmation(true);
-      toast.success("SOS sent to all contacts!");
+      if (mediaUrl) {
+        toast.success("SOS sent with emergency recording!");
+      } else {
+        toast.success("SOS sent to all contacts!");
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to send SOS");
     } finally {

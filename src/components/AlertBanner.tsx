@@ -38,14 +38,24 @@ const AlertBanner = ({ userId }: AlertBannerProps) => {
   return (
     <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-destructive to-orange-500 text-white p-4 shadow-2xl animate-in slide-in-from-top duration-500">
       <div className="container mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-1">
           <AlertTriangle className="w-6 h-6 animate-pulse" />
-          <div>
+          <div className="flex-1">
             <p className="font-bold text-lg">LIVE SOS ALERT!</p>
             <p className="text-sm">
               Your contact <strong>{alert.sender_name}</strong> has triggered an SOS!
             </p>
             <p className="text-xs mt-1">{alert.message}</p>
+            {alert.media_url && (
+              <a
+                href={alert.media_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs mt-2 inline-block font-bold underline hover:text-blue-200"
+              >
+                📹 View Emergency Recording
+              </a>
+            )}
           </div>
         </div>
         <Button

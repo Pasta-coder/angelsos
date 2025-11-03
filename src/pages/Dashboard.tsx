@@ -105,6 +105,33 @@ const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
+          <Card className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border-orange-500/20">
+            <CardHeader>
+              <CardTitle>Enable Emergency Recording</CardTitle>
+              <CardDescription>
+                To automatically record audio/video during an SOS, grant permission before an emergency.
+                We will only access your camera and microphone when you trigger an SOS.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button
+                onClick={async () => {
+                  try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    stream.getTracks().forEach(track => track.stop());
+                    toast.success("Camera and microphone permissions granted!");
+                  } catch (err) {
+                    console.error('Permission denied:', err);
+                    toast.error("Permission denied. Please allow camera and microphone access.");
+                  }
+                }}
+                className="w-full"
+              >
+                Grant Camera & Mic Permission
+              </Button>
+            </CardContent>
+          </Card>
+
 
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-6">

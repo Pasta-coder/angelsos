@@ -1,3 +1,31 @@
+-- Create storage bucket for emergency media
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'emergency-media',
+  'emergency-media',
+  true,
+  10485760, -- 10MB limit
+  ARRAY['audio/webm', 'video/webm', 'audio/wav', 'video/mp4']
+);
+
+-- Create policy to allow authenticated users to upload their own media
+CREATE POLICY "Users can upload their own emergency media"
+ON storage.objects
+FOR INSERT
+WITH CHECK (
+  bucket_id = 'emergency-media' AND
+  auth.uid()::text = (storage.foldername(name))[1]
+);
+
+-- Create policy to allow anyone to view emergency media (public bucket)
+CREATE POLICY "Emergency media is publicly accessible"
+ON storage.objects
+FOR SELECT
+USING (bucket_id = 'emergency-media');
+
+-- Add media_url column to sos_alerts table
+ALTER TABLE public.sos_alerts
+ADD COLUMN media_url text;
 -- Add phone column to contacts table
 ALTER TABLE public.contacts
 ADD COLUMN phone text DEFAULT '';

@@ -46,6 +46,7 @@ export type Database = {
           created_at: string
           id: string
           location: Json
+          media_url: string | null
           message: string
           recipient_user_id: string
           sender_name: string
@@ -54,6 +55,7 @@ export type Database = {
           created_at?: string
           id?: string
           location: Json
+          media_url?: string | null
           message: string
           recipient_user_id: string
           sender_name: string
@@ -62,6 +64,7 @@ export type Database = {
           created_at?: string
           id?: string
           location?: Json
+          media_url?: string | null
           message?: string
           recipient_user_id?: string
           sender_name?: string
